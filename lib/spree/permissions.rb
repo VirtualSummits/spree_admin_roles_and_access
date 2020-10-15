@@ -25,11 +25,11 @@ module Spree
       current_ability.can :create, Spree::Order
 
       current_ability.can :read, Spree::Order, [] do |order, token|
-        order.user == user || (order.guest_token && token == order.guest_token)
+        order.user == user || (order_token(order) && token == order_token(order))
       end
 
       current_ability.can :update, Spree::Order do |order, token|
-        !order.completed? && (order.user == user || order.guest_token && token == order.guest_token)
+        !order.completed? && (order.user == user || order_token(order) && token == order_token(order))
       end
 
       current_ability.can :read, Spree::Address do |address|
@@ -64,16 +64,20 @@ module Spree
     end
 
     private
-      def find_action_and_subject(name)
-        can, action, subject, attribute = name.to_s.split('-')
+    def find_action_and_subject(name)
+      can, action, subject, attribute = name.to_s.split('-')
 
-        if subject == 'all'
-          return can.to_sym, action.to_sym, subject.to_sym, attribute.try(:to_sym)
-        elsif (subject_class = subject.classify.safe_constantize) && subject_class.respond_to?(:ancestors)
-          return can.to_sym, action.to_sym, subject_class, attribute.try(:to_sym)
-        else
-          return can.to_sym, action.to_sym, subject, attribute.try(:to_sym)
-        end
+      if subject == 'all'
+        return can.to_sym, action.to_sym, subject.to_sym, attribute.try(:to_sym)
+      elsif (subject_class = subject.classify.safe_constantize) && subject_class.respond_to?(:ancestors)
+        return can.to_sym, action.to_sym, subject_class, attribute.try(:to_sym)
+      else
+        return can.to_sym, action.to_sym, subject, attribute.try(:to_sym)
       end
+    end
+
+    def order_token(order)
+      order.respond_to?(:token) ? order.token : order.guest_token
+    end
   end
 end
